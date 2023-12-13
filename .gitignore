@@ -67,3 +67,7 @@ node_modules/
 
 # locks
 *-lock.json
+
+# xlsx
+
+*.xlsx
