@@ -19,20 +19,25 @@ const initApp = async (req, res) => {
   const excel = XLSX.readFile("/Users/danneira/Desktop/Proyectos/aion-functions/functions/initApp/Matriz AION.xlsx", {});
   const nombreHoja = excel.SheetNames;
   let instituciones = [];
-  let departamentos;
-  let responsables;
-  let roles;
-  let poas;
-  let pacs;
+  let departamentos = [];
+  let responsables = [];
+  let procedimientos = [];
+  let roles = [];
+  let poas = [];
+  let pacs = [];
   instituciones = XLSX.utils.sheet_to_json(excel.Sheets[nombreHoja[0]]);
   departamentos = XLSX.utils.sheet_to_json(excel.Sheets[nombreHoja[1]]);
   roles = XLSX.utils.sheet_to_json(excel.Sheets[nombreHoja[2]]);
   responsables = XLSX.utils.sheet_to_json(excel.Sheets[nombreHoja[3]]);
-  poas = XLSX.utils.sheet_to_json(excel.Sheets[nombreHoja[4]]);
-  pacs = XLSX.utils.sheet_to_json(excel.Sheets[nombreHoja[5]]);
+  procedimientos = XLSX.utils.sheet_to_json(excel.Sheets[nombreHoja[4]]);
+  poas = XLSX.utils.sheet_to_json(excel.Sheets[nombreHoja[5]]);
+  pacs = XLSX.utils.sheet_to_json(excel.Sheets[nombreHoja[6]]);
   let rolesContainer = [];
   const users = (await db.collection("users").get()).docs.map((user) => {
-    return user.data();
+    return {
+      ref: user.ref,
+      data: user.data()
+    };
   });
   for (let j = instituciones.length - 1; j >= 0; j--) {
     delete instituciones[j].LEYENDA;
@@ -72,6 +77,25 @@ const initApp = async (req, res) => {
     }
     if (responsables[j] === undefined) {
       responsables.splice(j, 1);
+    }
+  }
+  const responsablesFiltrado = responsables.filter((responsable) => {
+    if (responsable.nombreMostrar === null || responsable.nombreMostrar === undefined || responsable.nombreMostrar === 0 || responsable.nombreMostrar === false) {
+      return false;
+    }
+    if (typeof responsable.nombreMostrar === "string" && responsable.nombreMostrar.trim() === "") {
+      return false;
+    }
+    return true;
+  });
+  for (let j = procedimientos.length - 1; j >= 0; j--) {
+    delete procedimientos[j].LEYENDA;
+    delete procedimientos[j].__EMPTY_1;
+    if (Object.entries(procedimientos[j]).length === 0) {
+      delete procedimientos[j];
+    }
+    if (procedimientos[j] === undefined) {
+      procedimientos.splice(j, 1);
     }
   }
   for (let j = poas.length - 1; j >= 0; j--) {
@@ -142,7 +166,7 @@ const initApp = async (req, res) => {
     }
     const newRolRef = db.collection("roles").doc(`${rol.nombre}`);
     batch.set(newRolRef, rolFormated);
-    rolesContainer.push({id: newRolRef.id});
+    rolesContainer.push({ref: newRolRef, rolName: rol.nombre});
   }
   for (let institucion of instituciones) {
     let newlistaValuesString;
@@ -228,13 +252,83 @@ const initApp = async (req, res) => {
     const newInstRef = db.collection("Institution").doc();
     batch.set(newInstRef, institucion);
     for (let departamento of departamentos) {
-      if (institucion.nombre == departamento.institucion) {
-        departamento = {
-            departmentName: departamento.nombre,
-            code: departamento.codigo,
-            icon: departamento.icono
+      departamento = {
+        departmentName: departamento.nombre,
+        code: departamento.codigo,
+        icon: departamento.icono,
+        iconDark: departamento.iconoOscuro,
+        year: departamento.year,
+        director: departamento.director,
+        totalProjectsWithBudget: 0,
+        projectsRelevance: 0,
+        precontractualProjects: 0,
+        totalBudget: 0,
+        totalProjectsWithoutBudget: 0,
+        runningActivities: 0,
+        completedActivities: 0,
+        rescheduledActivities: 0,
+        preparatoryProyects: 0,
+        runningProjects: 0,
+        totalPAC: 0,
+        totalPaid: 0,
+        totalPOA: 0,
+        administrativeExpenseTotal: 0,
+        operatingExpenseTotal: 0,
+        instId: newInstRef
+      }
+      const newDepartRef = db.collection("departments").doc();
+      for (let responsable of responsablesFiltrado) {
+        if (departamento.departmentName == responsable.departments) {
+          let rol = rolesContainer.find((rol) => rol.rolName == responsable.rol);
+          const user = {
+            email: responsable.email,
+            displayName: responsable.nombreMostrar,
+            password: "aion2023",
+          };
+          responsable = {
+            jobPosition: responsable.cargo,
+            createdBy: responsable.creadoPor,
+            display_name: responsable.nombreMostrar,
+            photo_url: responsable.foto,
+            phone_number: responsable.telefono,
+            email: responsable.email,
+            firstName: responsable.nombre,
+            lastName: responsable.apellido,
+            state: false,
+            institution: newInstRef,
+            departmentRef: newDepartRef,
+            rolId: rol.ref,
+          };
+          const created = users.some((resp) => resp.data.email == user.email);
+          /* if (!created) {
+            const newRespRef = db.collection("users").doc();
+            try {
+              const usuario = await auth.createUser({...user, uid: `${newRespRef.id}`});
+              console.log("Usuario creado con éxito:", usuario.uid);
+              responsable = {
+                ...responsable,
+                uid: usuario.uid,
+                created_time: new Date(usuario.metadata.creationTime),
+              };
+              users.push({ref: newRespRef, data: responsable});
+              batch.set(newRespRef, responsable);
+            } catch (error) {
+              console.error("Error al crear usuario:", error);
+            }
+          } */
         }
-        
+      }
+      /* let user = users.find((user) => (user.data.display_name == departamento.director) && (user.data.departmentRef == newDepartRef));
+      departamento = {
+        ...departamento,
+        director: user.ref,
+      } */
+      batch.set(newDepartRef, departamento);
+      for (let poa of poas) {
+        console.log(poa)
+        if (departamento.nombre) {
+          
+        }
       }
     }
   }
