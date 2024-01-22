@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 const {onRequest} = require("firebase-functions/v2/https");
 const {setGlobalOptions} = require("firebase-functions/v2");
 const admin = require("firebase-admin");
@@ -32,11 +33,11 @@ const initApp = async (req, res) => {
   procedimientos = XLSX.utils.sheet_to_json(excel.Sheets[nombreHoja[4]]);
   poas = XLSX.utils.sheet_to_json(excel.Sheets[nombreHoja[5]]);
   pacs = XLSX.utils.sheet_to_json(excel.Sheets[nombreHoja[6]]);
-  let rolesContainer = [];
+  const rolesContainer = [];
   const users = (await db.collection("users").get()).docs.map((user) => {
     return {
       ref: user.ref,
-      data: user.data()
+      data: user.data(),
     };
   });
   for (let j = instituciones.length - 1; j >= 0; j--) {
@@ -118,34 +119,32 @@ const initApp = async (req, res) => {
       pacs.splice(j, 1);
     }
   }
-  for (let rol of roles) {
+  for (const rol of roles) {
     let rolFormated = {};
-    let newlistaVistas;
-    let newlistaPermisos;
     const listaVistas = rol.vistas.split("*");
     const rolesFiltrado = listaVistas.filter((valor) => {
       if (valor === null || valor === undefined || valor === 0 || valor === false) {
-          return false;
+        return false;
       }
       if (typeof valor === "string" && valor.trim() === "") {
-          return false;
+        return false;
       }
       return true;
     });
-    newlistaVistas = rolesFiltrado.map((vista) => {
+    const newlistaVistas = rolesFiltrado.map((vista) => {
       return vista.trim();
     });
     const listaPermisos = rol.permisos.split("*");
     const permisosFiltrado = listaPermisos.filter((valor) => {
       if (valor === null || valor === undefined || valor === 0 || valor === false) {
-          return false;
+        return false;
       }
       if (typeof valor === "string" && valor.trim() === "") {
-          return false;
+        return false;
       }
       return true;
     });
-    newlistaPermisos = permisosFiltrado.map((permiso) => {
+    const newlistaPermisos = permisosFiltrado.map((permiso) => {
       return permiso.trim();
     });
     const permisos = [];
@@ -153,24 +152,23 @@ const initApp = async (req, res) => {
       const vista = newlistaVistas[i];
       const permiso = newlistaPermisos[i];
       permisos.push({
-          permiso: `${vista}`,
-          lectura: permiso[0] == 1? true : false,
-          escritura: permiso[1] == 1? true : false,
-          edicion: permiso[2] == 1? true : false,
-          eliminacion: permiso[3] == 1? true : false,
-      })
+        permiso: `${vista}`,
+        lectura: permiso[0] == 1? true : false,
+        escritura: permiso[1] == 1? true : false,
+        edicion: permiso[2] == 1? true : false,
+        eliminacion: permiso[3] == 1? true : false,
+      });
     }
     rolFormated = {
       rolName: rol.nombre,
-      permisos
-    }
+      permisos,
+    };
     const newRolRef = db.collection("roles").doc(`${rol.nombre}`);
     batch.set(newRolRef, rolFormated);
     rolesContainer.push({ref: newRolRef, rolName: rol.nombre});
   }
   for (let institucion of instituciones) {
     let newlistaValuesString;
-    let newlistaPlanes;
     if (institucion.valores) {
       const listaValuesString = institucion.valores.split(",");
       const arrayFiltrado = listaValuesString.filter((valor) => {
@@ -196,7 +194,7 @@ const initApp = async (req, res) => {
       }
       return true;
     });
-    newlistaPlanes = planesFiltrado.map((plan) => {
+    const newlistaPlanes = planesFiltrado.map((plan) => {
       return plan.trim();
     });
     const planActivo = {};
@@ -247,8 +245,8 @@ const initApp = async (req, res) => {
       totalPOA: 0,
       administrativeExpenseTotal: 0,
       operatingExpenseTotal: 0,
-      planActivo: {...planActivo}
-    }
+      planActivo: {...planActivo},
+    };
     const newInstRef = db.collection("Institution").doc();
     batch.set(newInstRef, institucion);
     for (let departamento of departamentos) {
@@ -274,12 +272,12 @@ const initApp = async (req, res) => {
         totalPOA: 0,
         administrativeExpenseTotal: 0,
         operatingExpenseTotal: 0,
-        instId: newInstRef
-      }
+        instId: newInstRef,
+      };
       const newDepartRef = db.collection("departments").doc();
       for (let responsable of responsablesFiltrado) {
         if (departamento.departmentName == responsable.departments) {
-          let rol = rolesContainer.find((rol) => rol.rolName == responsable.rol);
+          const rol = rolesContainer.find((rol) => rol.rolName == responsable.rol);
           const user = {
             email: responsable.email,
             displayName: responsable.nombreMostrar,
@@ -300,7 +298,7 @@ const initApp = async (req, res) => {
             rolId: rol.ref,
           };
           const created = users.some((resp) => resp.data.email == user.email);
-          /* if (!created) {
+          if (!created) {
             const newRespRef = db.collection("users").doc();
             try {
               const usuario = await auth.createUser({...user, uid: `${newRespRef.id}`});
@@ -315,25 +313,24 @@ const initApp = async (req, res) => {
             } catch (error) {
               console.error("Error al crear usuario:", error);
             }
-          } */
+          }
         }
       }
-      /* let user = users.find((user) => (user.data.display_name == departamento.director) && (user.data.departmentRef == newDepartRef));
+      const user = users.find((user) => (user.data.display_name == departamento.director) && (user.data.departmentRef == newDepartRef));
       departamento = {
         ...departamento,
         director: user.ref,
-      } */
+      };
       batch.set(newDepartRef, departamento);
-      for (let poa of poas) {
-        console.log(poa)
-        if (departamento.nombre) {
-          
-        }
+      for (const poa of poas) {
+        console.log(poa);
+        /* if (departamento.nombre) {
+        } */
       }
     }
   }
   try {
-    //await batch.commit();
+    await batch.commit();
     console.log("Documentos agregados exitosamente");
     res.status(200).send({status: "Success!", message: "Función ejecutada correctamente"});
   } catch (error) {

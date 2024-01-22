@@ -1,6 +1,19 @@
 {
   "functions": [
     {
+      "source": "functions/createUser",
+      "codebase": "create-user",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.xlsx"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ]
+    },{
       "source": "functions/initApp",
       "codebase": "init-app",
       "ignore": [
